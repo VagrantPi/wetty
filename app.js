@@ -5,6 +5,7 @@ var path = require('path');
 var server = require('socket.io');
 var pty = require('pty.js');
 var fs = require('fs');
+var program = require('commander');
 
 var opts = require('optimist')
     .options({
@@ -28,6 +29,10 @@ var opts = require('optimist')
             demand: false,
             description: 'ssh user'
         },
+        sshuserpasswd: {
+            demand: false,
+            description: 'ssh user passwd'
+        },
         sshauth: {
             demand: false,
             description: 'defaults to "password", you can use "publickey,password" instead'
@@ -44,6 +49,7 @@ var sshport = 22;
 var sshhost = 'localhost';
 var sshauth = 'password';
 var globalsshuser = '';
+var globalsshuserpasswd = '';
 
 if (opts.sshport) {
     sshport = opts.sshport;
@@ -59,6 +65,10 @@ if (opts.sshauth) {
 
 if (opts.sshuser) {
     globalsshuser = opts.sshuser;
+}
+
+if (opts.sshuserpasswd) {
+    globalsshuserpasswd = opts.sshuserpasswd;
 }
 
 if (opts.sslkey && opts.sslcert) {
@@ -93,6 +103,7 @@ if (runhttps) {
 var io = server(httpserv,{path: '/wetty/socket.io'});
 io.on('connection', function(socket){
     var sshuser = '';
+    var sshuserpasswd = globalsshuserpasswd;
     var request = socket.request;
     console.log((new Date()) + ' Connection accepted.');
     if (match = request.headers.referer.match('/wetty/ssh/.+$')) {
@@ -114,6 +125,13 @@ io.on('connection', function(socket){
             cols: 80,
             rows: 30
         });
+        setTimeout(function(){
+	  term.write(sshuserpasswd + "\n");            //key userpasswd to auto  login
+	}, 100);
+        setTimeout(function(){
+	  term.write("clear\n");
+	}, 1000);
+
     }
     console.log((new Date()) + " PID=" + term.pid + " STARTED on behalf of user=" + sshuser)
     term.on('data', function(data) {
@@ -132,3 +150,13 @@ io.on('connection', function(socket){
         term.end();
     });
 })
+
+program
+  .version('0.0.1')
+  .option('-p, --peppers', 'Add peppers');
+
+console.log('you ordered a pizza with:');
+if (program.peppers) console.log('  - peppers');
+console.log('  - %s cheese', program.cheese);
+
+
