@@ -5,7 +5,6 @@ var path = require('path');
 var server = require('socket.io');
 var pty = require('pty.js');
 var fs = require('fs');
-var program = require('commander');
 
 var opts = require('optimist')
     .options({
@@ -29,10 +28,6 @@ var opts = require('optimist')
             demand: false,
             description: 'ssh user'
         },
-        sshuserpasswd: {
-            demand: false,
-            description: 'ssh user passwd'
-        },
         sshauth: {
             demand: false,
             description: 'defaults to "password", you can use "publickey,password" instead'
@@ -46,10 +41,10 @@ var opts = require('optimist')
 
 var runhttps = false;
 var sshport = 22;
-var sshhost = 'localhost';
+//var sshhost = 'localhost';
+var sshhost = 'ws.csie.nptu.edu.tw';
 var sshauth = 'password';
 var globalsshuser = '';
-var globalsshuserpasswd = '';
 
 if (opts.sshport) {
     sshport = opts.sshport;
@@ -67,10 +62,6 @@ if (opts.sshuser) {
     globalsshuser = opts.sshuser;
 }
 
-if (opts.sshuserpasswd) {
-    globalsshuserpasswd = opts.sshuserpasswd;
-}
-
 if (opts.sslkey && opts.sslcert) {
     runhttps = true;
     opts['ssl'] = {};
@@ -85,10 +76,18 @@ process.on('uncaughtException', function(e) {
 var httpserv;
 
 var app = express();
+
 app.get('/wetty/ssh/:user', function(req, res) {
     res.sendfile(__dirname + '/public/wetty/index.html');
 });
 app.use('/', express.static(path.join(__dirname, 'public')));
+
+app.get('/ssh', function(req, res) {
+    globalsshuser = req.query.username;
+    console.log(globalsshuser);
+    res.sendfile(__dirname + '/public/wetty/index.html');
+    //globalsshuser = req.query.username;
+});
 
 if (runhttps) {
     httpserv = https.createServer(opts.ssl, app).listen(opts.port, function() {
@@ -103,17 +102,16 @@ if (runhttps) {
 var io = server(httpserv,{path: '/wetty/socket.io'});
 io.on('connection', function(socket){
     var sshuser = '';
-    var sshuserpasswd = globalsshuserpasswd;
     var request = socket.request;
     console.log((new Date()) + ' Connection accepted.');
-    if (match = request.headers.referer.match('/wetty/ssh/.+$')) {
+    /*if (match = request.headers.referer.match('/wetty/ssh/.+$')) {
         sshuser = match[0].replace('/wetty/ssh/', '') + '@';
-    } else if (globalsshuser) {
+    } else if (globalsshuser) {*/
         sshuser = globalsshuser + '@';
-    }
+//    }
 
     var term;
-    if (process.getuid() == 0) {
+    if (process.getuid() != 0) {
         term = pty.spawn('/bin/login', [], {
             name: 'xterm-256color',
             cols: 80,
@@ -121,17 +119,11 @@ io.on('connection', function(socket){
         });
     } else {
         term = pty.spawn('ssh', [sshuser + sshhost, '-p', sshport, '-o', 'PreferredAuthentications=' + sshauth], {
+        //term = pty.spawn('ssh vagrant@ws.csie.nptu.edu.tw', {
             name: 'xterm-256color',
             cols: 80,
             rows: 30
         });
-        setTimeout(function(){
-	  term.write(sshuserpasswd + "\n");            //key userpasswd to auto  login
-	}, 100);
-        setTimeout(function(){
-	  term.write("clear\n");
-	}, 1000);
-
     }
     console.log((new Date()) + " PID=" + term.pid + " STARTED on behalf of user=" + sshuser)
     term.on('data', function(data) {
@@ -150,13 +142,3 @@ io.on('connection', function(socket){
         term.end();
     });
 })
-
-program
-  .version('0.0.1')
-  .option('-p, --peppers', 'Add peppers');
-
-console.log('you ordered a pizza with:');
-if (program.peppers) console.log('  - peppers');
-console.log('  - %s cheese', program.cheese);
-
-

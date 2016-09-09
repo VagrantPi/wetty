@@ -5357,7 +5357,7 @@ hterm.Frame.prototype.show = function() {
       'height: ' + headerHeight + ';' +
       'background-color: ' + this.terminal_.getForegroundColor() + ';' +
       'color: ' + this.terminal_.getBackgroundColor() + ';' +
-      'font-size: 22px;' +
+      'font-size: 20px;' +
       'font-family: ' + this.terminal_.getFontFamily());
   container.appendChild(header);
 
@@ -8375,12 +8375,13 @@ hterm.ScrollPort.prototype.decorate = function(div) {
   // from screen.js.  I need to pick a better name for one of them to avoid
   // the collision.
   this.screen_ = doc.createElement('x-screen');
+  this.screen_.setAttribute('id', 'xscreen');
   this.screen_.setAttribute('role', 'textbox');
   this.screen_.setAttribute('tabindex', '-1');
   this.screen_.style.cssText = (
       'display: block;' +
       'font-family: monospace;' +
-      'font-size: 15px;' +
+      'font-size: 22px;' +
       'height: 100%;' +
       'overflow-y: scroll; overflow-x: hidden;' +
       'white-space: pre;' +
